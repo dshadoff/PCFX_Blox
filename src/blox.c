@@ -23,6 +23,8 @@
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
 
+// Joypad defines (move these to library includes)
+//
 #define JOY_I            1
 #define JOY_II           2
 #define JOY_III          4
@@ -38,6 +40,83 @@
 #define JOY_MODE1        4096
 #define JOY_MODE2        16384
 
+// HuC6270 defines (move these to library includes)
+//
+#define HUC6270_REG_MAWR    0x00      // Memory Address Write register
+#define HUC6270_REG_MARR    0x01      // Memory Address Read register
+#define HUC6270_REG_DATA    0x02      // Data (write or read)
+#define HUC6270_REG_CR      0x05      // Control register
+#define HUC6270_REG_RCR     0x06      // Raster Counter register
+#define HUC6270_REG_BXR     0x07      // BGX Scroll register
+#define HUC6270_REG_BYR     0x08      // BGY Scroll register
+#define HUC6270_REG_MWR     0x09      // Memory Access Width register
+#define HUC6270_REG_HSR     0x0A      // Horizontal Sync register
+#define HUC6270_REG_HDR     0x0B      // Horizontal Display register
+#define HUC6270_REG_VPR     0x0C      // Vertical Sync register
+#define HUC6270_REG_VDR     0x0D      // Vertical Display register
+#define HUC6270_REG_VCR     0x0E      // Vertical Display End Position register
+#define HUC6270_REG_DCR     0x0F      // Block Transfer Control register
+#define HUC6270_REG_SOUR    0x10      // Block Transfer Source Address register
+#define HUC6270_REG_DESR    0x11      // Block Transfer Destination Address register
+#define HUC6270_REG_LENR    0x12      // Block Transfer Length register
+#define HUC6270_REG_DVSSR   0x13      // VRAM-SATB Block Transfer Source Address register
+
+#define HUC6270_STAT_CR     0x0001    // Collision detect
+#define HUC6270_STAT_OR     0x0002    // Over detect (too many sprites)
+#define HUC6270_STAT_RR     0x0004    // Raster scanline detect
+#define HUC6270_STAT_DS     0x0008    // Block xfer from VRAM to SATB end detect
+#define HUC6270_STAT_DV     0x0010    // Block xfer from VRAM to VRAM end detect
+#define HUC6270_STAT_VD     0x0020    // Vertical Blank Detect
+#define HUC6270_STAT_BSY    0x0040    // Busy
+
+#define HUC6270_CR_IRQ_CC   0x0001    // Interrupt Request Enable on collision detect
+#define HUC6270_CR_IRQ_OC   0x0002    // Interrupt Request Enable on over detect
+#define HUC6270_CR_IRQ_RC   0x0004    // Interrupt Request Enable on raster detect
+#define HUC6270_CR_IRQ_VC   0x0008    // Interrupt Request Enable on vertical blank detect
+
+// Note that CR bits 0x0010 and 0x0020 are for external sync ('EX'), which are normally '00'
+#define HUC6270_CR_SB       0x0040    // Sprite blank (1 = visible)
+#define HUC6270_CR_BB       0x0080    // Background blank (1 = visible)
+
+// Note that CR bits 0x0100 and 0x0200 are for DISP output select ('TE'), which are normally '00'
+// Note that CR bit  0x0400 is for Dynamic RAM refresh ('DR'), which is normally '0'
+
+#define HUC6270_CR_IW_01    0x0000    // Bitfield for auto-increment of address pointer of 0x01
+#define HUC6270_CR_IW_20    0x0800    // Bitfield for auto-increment of address pointer of 0x20
+#define HUC6270_CR_IW_40    0x1000    // Bitfield for auto-increment of address pointer of 0x40
+#define HUC6270_CR_IW_80    0x1800    // Bitfield for auto-increment of address pointer of 0x80
+
+// Note that MWR VRAM   access width mode (0x0001 & 0x0002) is usually '00'
+// Note that MWR Sprite access width mode (0x0004 & 0x0008) is usually '00'
+#define HUC6270_MWR_SCREEN_32x32   0x0000    // Bitfield for virtual screen map of  32 wide, 32 tall
+#define HUC6270_MWR_SCREEN_64x32   0x0010    // Bitfield for virtual screen map of  64 wide, 32 tall
+#define HUC6270_MWR_SCREEN_128x32  0x0020    // Bitfield for virtual screen map of 128 wide, 32 tall
+#define HUC6270_MWR_SCREEN_32x64   0x0040    // Bitfield for virtual screen map of  32 wide, 64 tall
+#define HUC6270_MWR_SCREEN_64x64   0x0050    // Bitfield for virtual screen map of  64 wide, 64 tall
+#define HUC6270_MWR_SCREEN_128x64  0x0060    // Bitfield for virtual screen map of 128 wide, 64 tall
+// Note that MWR CG mode for 4 clocks ode (0x0080) is usually '0'
+
+#define CHR_SIZE        0x10
+#define CHRREF(palette, vramaddr)	((palette << 12) | (vramaddr >> 4))
+
+#define SPRITE_Y_INVERT		0x8000
+#define SPRITE_Y_HEIGHT_1	0x0
+#define SPRITE_Y_HEIGHT_2	0x1000
+#define SPRITE_Y_HEIGHT_4	0x3000
+
+#define SPRITE_X_INVERT		0x800
+#define SPRITE_X_WIDTH_1	0x0
+#define SPRITE_X_WIDTH_2	0x100
+#define SPRITE_PRIO_BG		0x0
+#define SPRITE_PRIO_SP		0x80
+#define SPRITE_PATTERN(vramaddr)	(vramaddr >> 5)
+
+
+#define SPR_CELL	0x0040
+#define SPR_32x32CELL	0x0100
+
+
+
 
 typedef enum {
 	VDC0,
@@ -47,6 +126,13 @@ typedef enum {
 // Constants used by program:
 //
 //
+#define CG_VRAMLOC       0x1000
+#define CG_FONTLOC       CG_VRAMLOC
+#define CG_GRAPHICS      (CG_VRAMLOC+0x1000)
+
+#define SPR_VRAMLOC      0x5000
+#define SATB_VRAMLOC     0xFF00
+
 #define BGMAPHEIGHT      32	// BG map is 32 tiles tiles
 #define BGMAPWIDTH       64     // BG map is 64 tiles wide (incl. using 'virtual' mode)
 
@@ -54,16 +140,15 @@ typedef enum {
 #define FIELDHEIGHT      20	// (# tiles high)
 #define FIELDHIDHT       4	// height of 'hidden' portion at top
 
+#define SCOREPOSX        3	// x-position of score message
+#define SCOREPOSY        3	// y-position of score message
+#define SCOREPAL         1	// CG palette # for printing scores
+
 #define FIELDX           20	// field x-position in tiles - top left corner
 #define FIELDY           1	// (y-position)    * includes hidden portion
 
 #define FLD_SPRXORG      (FIELDX*8+32)	// pixel-based origin x-position (for sprites)
 #define FLD_SPRYORG      (FIELDY*8+64)	// (y-position)
-
-
-#define SCOREPOSX        3	// x-position of score message
-#define SCOREPOSY        3	// y-position of score message
-#define SCOREPAL         1	// CG palette # for printing scores
 
 #define PAUSEMSGX        22	// pause message (x,y) location
 #define PAUSEMSGY        14
@@ -71,9 +156,26 @@ typedef enum {
 #define GAMOVRMSGX       23	// GAME OVER message (x,y) location
 #define GAMOVRMSGY       14
 
+#define JOYRPTMASK       (JOY_LEFT|JOY_RIGHT|JOY_DOWN|JOY_I|JOY_II)
+#define JOYRPTINIT       15
+#define JOYRPTSUBS       3
 
 
 
+void vsync(int numframes);
+void pause(void);
+void gameover(void);
+void setpiece(void);
+void setsprvars(void);
+void nxtpiece(void);
+void snapshot(int type, int phase, int xpos, int ypos);
+void init_score(void);
+void clear_display_field(void);
+void disp_bkgnd(void);
+void display_score(void);
+void disp_playfield(void);
+int chkmvok(int type, int phase, int xpos, int ypos, int xdelta, int ydelta);
+void init(void);
 
 void print_at(int x, int y, int pal, char* str);
 
@@ -116,25 +218,19 @@ const chlng_level diff_level[] = {
    { 1, "99999" }
 };
 
-char *hex_lookup = "0123456789ABCDEF";
-
 char *scoremsg = "SCORE: ";
 char *pausemsg = "PAUSE";
 char *gameovermsg1 = "GAME";
 char *gameovermsg2 = "OVER";
 
+int  levelval;
+int  frampermov;
+int  fpmcount;
 char scoreval[6];
-
-uint8_t mem_buf[256];
-
-char buffer[2048];
 
 
 char displn[24][FIELDWIDTH];
 
-char oldx;
-char oldy;
-char oldphs;
 char pieceposx;
 char pieceposy;
 char phasenum;
@@ -197,14 +293,6 @@ const uint16_t SPR_palette[] = {
   0x0088, 0x0088, 0x0088, 0x0088, 0x0088, 0x0088, 0x0088, 0x0088
 };
 
-#define CG_VRAMLOC	0x1000
-#define CHR_SIZE        0x10
-#define CHRREF(palette, vramaddr)	((palette << 12) | (vramaddr >> 4))
-
-
-#define FONT_VRAMLOC		CG_VRAMLOC
-
-#define CG_GRAPHICS		(CG_VRAMLOC+0x1000)
 
 #define OFFCHR_VRAMLOC		(CG_GRAPHICS)
 #define BKCHR1_VRAMLOC		(OFFCHR_VRAMLOC   +CHR_SIZE)
@@ -223,24 +311,6 @@ const uint16_t SPR_palette[] = {
 #define FULLCHR_PAL		0
 
 
-#define SPRITE_Y_INVERT		0x8000
-#define SPRITE_Y_HEIGHT_1	0x0
-#define SPRITE_Y_HEIGHT_2	0x1000
-#define SPRITE_Y_HEIGHT_4	0x3000
-
-#define SPRITE_X_INVERT		0x800
-#define SPRITE_X_WIDTH_1	0x0
-#define SPRITE_X_WIDTH_2	0x100
-#define SPRITE_PRIO_BG		0x0
-#define SPRITE_PRIO_SP		0x80
-#define SPRITE_PATTERN(vramaddr)	(vramaddr >> 5)
-
-
-
-#define SPR_VRAMLOC	0x5000
-#define SPR_CELL	0x0040
-#define SPR_32x32CELL	0x0100
-#define SATB_VRAMLOC	0x7F00
 
 #define SPR_P0PH0VRAM	(SPR_VRAMLOC)
 #define SPR_P0PH1VRAM	(SPR_P0PH0VRAM+SPR_32x32CELL)
@@ -536,7 +606,7 @@ __attribute__ ((interrupt_handler)) void my_vblank_irq (void)
 {
    uint16_t vdc_status = *MEM_6270A_SR;
 
-   if (vdc_status & 0x20) {
+   if (vdc_status & HUC6270_STAT_VD ) {
       sda_frame_count++;
    }
    joyread();
@@ -564,38 +634,158 @@ __attribute__ ((noinline)) void step(void)
 
 // note vdc_num = 0 or 1
 //
-void poke_vram(VDCNUM vdc_num, uint16_t vid_addr, uint16_t vid_data)
-{
-   eris_low_sup_set_vram_write(0, vid_addr);
-   eris_low_sup_vram_write(0, vid_data);
-}
-
-uint16_t peek_vram(VDCNUM vdc_num, uint16_t vid_addr)
-{
-uint16_t vid_data = 0;
-
-   eris_low_sup_set_vram_write(0, vid_addr);
-   vid_data = eris_low_sup_vram_read(0);
-
-   return(vid_data);
-}
+//void poke_vram(VDCNUM vdc_num, uint16_t vid_addr, uint16_t vid_data)
+//{
+//   eris_low_sup_set_vram_write(vdc_num, vid_addr);
+//   eris_low_sup_vram_write(vdc_num, vid_data);
+//}
+//
+//uint16_t peek_vram(VDCNUM vdc_num, uint16_t vid_addr)
+//{
+//uint16_t vid_data = 0;
+//
+//   eris_low_sup_set_vram_write(vdc_num, vid_addr);
+//   vid_data = eris_low_sup_vram_read(vdc_num);
+//
+//   return(vid_data);
+//}
 
 void load_vram(VDCNUM vdc_num, const uint16_t *data, uint16_t vid_addr, uint16_t size)
 {
 int i;
 
-   eris_low_sup_set_vram_write(0, vid_addr);
+   eris_low_sup_set_vram_write(vdc_num, vid_addr);
 
    for (i = 0; i < size; i++)
    {
-      eris_low_sup_vram_write(0, *data);
+      eris_low_sup_vram_write(vdc_num, *data);
       data++;
    }
 }
 
 
+int main(int argc, char *argv[])
+{
+int tempphase;
+int rotatex;
+int rotatey;
+
+   init();
+
+   init_score();
+
+   clear_display_field();
+
+   frampermov = diff_level[0].vsyncs;
+
+   vsync(0);
+
+   disp_bkgnd();
+
+   display_score();
+
+   piecenum  = 0;
+//   phasenum  = 0;
+//   pieceposx = 3;
+//   pieceposy = 8;
+   setpiece();
+
+   fpmcount = frampermov;
+
+   while (1)
+   {
+      if ((joytrg & JOY_LEFT) == JOY_LEFT)
+         if (chkmvok(piecenum, phasenum, pieceposx, pieceposy, -1, 0) == 0)
+            pieceposx--;
+
+      if ((joytrg & JOY_RIGHT) == JOY_RIGHT)
+         if (chkmvok(piecenum, phasenum, pieceposx, pieceposy, 1, 0) == 0)
+            pieceposx++;
+
+      if ((joytrg & JOY_UP) == JOY_UP)
+         if (chkmvok(piecenum, phasenum, pieceposx, pieceposy, 0, -1) == 0)
+            pieceposy--;
+
+      if ((joytrg & JOY_DOWN) == JOY_DOWN)
+         if (chkmvok(piecenum, phasenum, pieceposx, pieceposy, 0, 1) == 0)
+            pieceposy++;
+
+      if ((joytrg & JOY_I) == JOY_I) {
+         tempphase = ((phasenum + 1) & 3);
+         rotatex = (piecetbl[(int)piecenum] + tempphase)->sprite_x_rotate_adjustment;
+         rotatey = (piecetbl[(int)piecenum] + tempphase)->sprite_y_rotate_adjustment;
+
+         if (chkmvok(piecenum, tempphase, pieceposx, pieceposy, rotatex, rotatey) == 0) {
+            phasenum   = tempphase;
+            pieceposx += rotatex;
+            pieceposy += rotatey;
+         }
+      }
+
+      if ((joytrg & JOY_II) == JOY_II) {
+         tempphase = ((phasenum + 3) & 3);
+         rotatex = (piecetbl[(int)piecenum] + tempphase)->sprite_x_rotate_adjustment;
+         rotatey = (piecetbl[(int)piecenum] + tempphase)->sprite_y_rotate_adjustment;
+
+         if (chkmvok(piecenum, tempphase, pieceposx, pieceposy, rotatex, rotatey) == 0) {
+            phasenum   = tempphase;
+            pieceposx += rotatex;
+            pieceposy += rotatey;
+         }
+      }
+
+      if ((joytrg & JOY_III) == JOY_III) {
+         if (piecenum == 6)
+            piecenum = 0;
+         else
+            piecenum++;
+      }
+
+      if ((joytrg & JOY_IV) == JOY_IV) {
+	 if (piecenum == 0)
+            piecenum = 6;
+         else
+            piecenum--;
+      }
+
+      setsprvars();
+
+
+      disp_playfield();
+
+      if ((joytrg & JOY_RUN) == JOY_RUN) {
+         pause();
+         gameover();
+      }
+
+      fpmcount--;
+
+      if (fpmcount == 0) {
+         fpmcount = frampermov;
+         if (chkmvok(piecenum, phasenum, pieceposx, pieceposy, 0, 1) == 0) {
+            pieceposy++;
+	 }
+         else {
+            snapshot(piecenum, phasenum, pieceposx, pieceposy);
+	    nxtpiece();
+	 }
+      }
+
+      vsync(0);
+   }
+
+   return 0;
+}
 
 void setpiece(void)
+{
+   phasenum = 0;
+   pieceposy = FIELDHIDHT - (piecetbl[(int)piecenum] + phasenum)->height;
+   pieceposx = (FIELDWIDTH - (piecetbl[(int)piecenum] + phasenum)->width) >> 1;
+   setsprvars();
+}
+
+void setsprvars(void)
 {
 int patterncode;
 int patternctrl;
@@ -624,6 +814,8 @@ void nxtpiece(void)
 {
 // get a random number from 0 to 6
    piecenum++;
+   if (piecenum > 6)
+      piecenum = 0;
    setpiece();
 }
 
@@ -666,7 +858,7 @@ int i, xdelta, ydelta;
    for (i = 0; i < 4; i++) {
       xdelta = (piecetbl[(int)type] + phase)->square[i].x;
       ydelta = (piecetbl[(int)type] + phase)->square[i].y;
-      displn[ypos + ydelta][xpos + xdelta] = type;
+      displn[ypos + ydelta][xpos + xdelta] = (type + 1);
    }
 }
 
@@ -705,7 +897,7 @@ uint16_t fontref = 0;
       if (letter == 0)
          break;
 
-      fontref = ((((FONT_VRAMLOC) >> 4) + letter)  | (palette << 12));
+      fontref = ((((CG_FONTLOC) >> 4) + letter)  | (palette << 12));
       eris_low_sup_vram_write(vdc, fontref);
    }
 }
@@ -731,7 +923,7 @@ int palette = 0;
       if (letter == 0)
          break;
 
-      fontref = ((((FONT_VRAMLOC) >> 4) + letter)  | (palette << 12));
+      fontref = ((((CG_FONTLOC) >> 4) + letter)  | (palette << 12));
       eris_low_sup_vram_write(VDC0, fontref);
    }
 
@@ -741,7 +933,7 @@ int palette = 0;
       if (letter == 0)
          break;
 
-      fontref = ((((FONT_VRAMLOC) >> 4) + letter)  | (palette << 12));
+      fontref = ((((CG_FONTLOC) >> 4) + letter)  | (palette << 12));
       eris_low_sup_vram_write(VDC0, fontref);
    }
 }
@@ -847,267 +1039,171 @@ int palette = 0;
 
 void init(void)
 {
-	int i, j;
+int i, j;
 
-//	u32 str[256];
-	u16 microprog[16];
-	u16 a, img;
+//   u32 str[256];
+   u16 microprog[16];
+   u16 a, img;
 
-	eris_sup_init(0, 1);
-//	eris_low_sup_init(0);
-	eris_low_sup_init(1);
-	eris_king_init();
-	eris_tetsu_init();
+   eris_sup_init(0, 1);
+//   eris_low_sup_init(0);
+   eris_low_sup_init(1);
+   eris_king_init();
+   eris_tetsu_init();
 	
-	eris_tetsu_set_priorities(0, 0, 1, 0, 0, 0, 0);
-//	eris_tetsu_set_7up_palette(0, 0x100);
-	eris_tetsu_set_7up_palette(0, 0);
-	eris_tetsu_set_king_palette(0, 0, 0, 0);
-	eris_tetsu_set_rainbow_palette(0);
+   eris_tetsu_set_priorities(0, 0, 1, 0, 0, 0, 0);
+//   eris_tetsu_set_7up_palette(0, 0x100);
+   eris_tetsu_set_7up_palette(0, 0);
+   eris_tetsu_set_king_palette(0, 0, 0, 0);
+   eris_tetsu_set_rainbow_palette(0);
 
-	eris_king_set_bg_prio(KING_BGPRIO_3, KING_BGPRIO_HIDE, KING_BGPRIO_HIDE, KING_BGPRIO_HIDE, 0);
-	eris_king_set_bg_mode(KING_BGMODE_4_PAL, 0, 0, 0);
-	eris_king_set_kram_pages(0, 0, 0, 0);
+   eris_king_set_bg_prio(KING_BGPRIO_3, KING_BGPRIO_HIDE, KING_BGPRIO_HIDE, KING_BGPRIO_HIDE, 0);
+   eris_king_set_bg_mode(KING_BGMODE_4_PAL, 0, 0, 0);
+   eris_king_set_kram_pages(0, 0, 0, 0);
 
-	for(i = 0; i < 16; i++) {
-		microprog[i] = KING_CODE_NOP;
-	}
-
-	microprog[0] = KING_CODE_BG0_CG_0;
-	eris_king_disable_microprogram();
-	eris_king_write_microprogram(microprog, 0, 16);
-	eris_king_enable_microprogram();
-
-
-	// Set up palette entries
-	//
-	for (i = 0; i < 128; i++) {
-	    eris_tetsu_set_palette(i, CG_palette[i]);
-	    eris_tetsu_set_palette(i+256, SPR_palette[i]);
-	}
-
-	//eris_tetsu_set_video_mode(TETSU_LINES_262, 0, TETSU_DOTCLOCK_7MHz, TETSU_COLORS_16,
-	eris_tetsu_set_video_mode(TETSU_LINES_262, 0, TETSU_DOTCLOCK_5MHz, TETSU_COLORS_16,
-				TETSU_COLORS_16, 1, 1, 0, 0, 0, 0, 0);
-	eris_king_set_bat_cg_addr(KING_BG0, 0, 0);
-	eris_king_set_bat_cg_addr(KING_BG0SUB, 0, 0);
-	eris_king_set_scroll(KING_BG0, 0, 0);
-	eris_king_set_bg_size(KING_BG0, KING_BGSIZE_256, KING_BGSIZE_256, KING_BGSIZE_256, KING_BGSIZE_256);
-
-	eris_low_sup_set_control(0, 0, 1, 1);
-
-	eris_low_sup_set_access_width(0, 0, SUP_LOW_MAP_64X32, 0, 0);
-	eris_low_sup_set_scroll(0, 0, 0);
-	eris_low_sup_set_video_mode(0, 2, 2, 4, 0x1F, 0x11, 2, 239, 2); // 5MHz numbers
-	//eris_low_sup_set_video_mode(0, 3, 3, 6, 0x2B, 0x11, 2, 239, 2); // 7MHz numbers
-
-	eris_king_set_kram_read(0, 1);
-	eris_king_set_kram_write(0, 1);
-	// Clear BG0's RAM
-	for(i = 0; i < 0x1E00; i++) {
-		eris_king_kram_write(0);
-	}
-	eris_king_set_kram_write(0, 1);
-
-//	eris_low_sup_set_vram_write(0, 0);
-//	for(i = 0; i < 0x800; i++) {
-// 	   eris_low_sup_vram_write(0, 0x120); // 0x80 is space
-//	}
-
-
-	// load font into video memory
-	// font background/foreground should be subpalettes #0 and #3 respectively
-	//
-	eris_low_sup_set_vram_write(0, 0x1200);
-
-	for(i = 0; i < 0x60; i++) {
-		// first 2 planes of color
-		for (j = 0; j < 8; j++) {
-			img = font[(i*8)+j] & 0xff;
-			a = (img << 8) | img;
-			eris_low_sup_vram_write(0, a);
-		}
-		// last 2 planes of color
-		for (j = 0; j < 8; j++) {
-			eris_low_sup_vram_write(0, 0);
-		}
-	}
-
-// load CG background gfx into VRAM
-//
-      load_vram(VDC0, offchr.data,    offchr.vidaddr,    offchr.size);
-      load_vram(VDC0, bkchr1.data,    bkchr1.vidaddr,    bkchr1.size);
-      load_vram(VDC0, bkchr2.data,    bkchr2.vidaddr,    bkchr2.size);
-      load_vram(VDC0, cornerchr.data, cornerchr.vidaddr, cornerchr.size);
-      load_vram(VDC0, endchr.data,    endchr.vidaddr,    endchr.size);
-      load_vram(VDC0, bottomchr.data, bottomchr.vidaddr, bottomchr.size);
-      load_vram(VDC0, fullchr.data,   fullchr.vidaddr,   fullchr.size);
-
-      load_vram(VDC0, p0ph0_data,     SPR_P0PH0VRAM,     sizeof(p0ph0_data));
-      load_vram(VDC0, p0ph1_data,     SPR_P0PH1VRAM,     sizeof(p0ph1_data));
-      load_vram(VDC0, p0ph2_data,     SPR_P0PH2VRAM,     sizeof(p0ph2_data));
-      load_vram(VDC0, p0ph3_data,     SPR_P0PH3VRAM,     sizeof(p0ph3_data));
-
-      load_vram(VDC0, p1ph0_data,     SPR_P1PH0VRAM,     sizeof(p1ph0_data));
-      load_vram(VDC0, p1ph1_data,     SPR_P1PH1VRAM,     sizeof(p1ph1_data));
-      load_vram(VDC0, p1ph2_data,     SPR_P1PH2VRAM,     sizeof(p1ph2_data));
-      load_vram(VDC0, p1ph3_data,     SPR_P1PH3VRAM,     sizeof(p1ph3_data));
-
-      load_vram(VDC0, p2ph0_data,     SPR_P2PH0VRAM,     sizeof(p2ph0_data));
-      load_vram(VDC0, p2ph1_data,     SPR_P2PH1VRAM,     sizeof(p2ph1_data));
-      load_vram(VDC0, p2ph2_data,     SPR_P2PH2VRAM,     sizeof(p2ph2_data));
-      load_vram(VDC0, p2ph3_data,     SPR_P2PH3VRAM,     sizeof(p2ph3_data));
-
-      load_vram(VDC0, p3ph0_data,     SPR_P3PH0VRAM,     sizeof(p3ph0_data));
-      load_vram(VDC0, p3ph1_data,     SPR_P3PH1VRAM,     sizeof(p3ph1_data));
-
-      load_vram(VDC0, p4ph0_data,     SPR_P4PH0VRAM,     sizeof(p4ph0_data));
-      load_vram(VDC0, p4ph1_data,     SPR_P4PH1VRAM,     sizeof(p4ph1_data));
-
-      load_vram(VDC0, p5ph0_data,     SPR_P5PH0VRAM,     sizeof(p5ph0_data));
-      load_vram(VDC0, p5ph1_data,     SPR_P5PH1VRAM,     sizeof(p5ph1_data));
-
-      load_vram(VDC0, p6ph0_data,     SPR_P6PH0VRAM,     sizeof(p6ph0_data));
-
-      load_vram(VDC0, p7ph0_data,     SPR_P7PH0VRAM,     sizeof(p7ph0_data));
-
-
-// make background checkered red & white
-//
-      clear_display_field();
-
-      disp_bkgnd();
-
-      init_score();
-
-      display_score();
-
-//
-//
-	eris_pad_init(0); // initialize joypad
-
-
-        // Disable all interrupts before changing handlers.
-        irq_set_mask(0x7F);
-
-        // Replace firmware IRQ handlers for the Timer and HuC6270-A.
-        //
-        // This liberis function uses the V810's hardware IRQ numbering,
-        // see FXGA_GA and FXGABOAD documents for more info ...
-        irq_set_raw_handler(0xC, my_vblank_irq);
-
-        // Enable Timer and HuC6270-A interrupts.
-        //
-        // d6=Timer
-        // d5=External
-        // d4=KeyPad
-        // d3=HuC6270-A
-        // d2=HuC6272
-        // d1=HuC6270-B
-        // d0=HuC6273
-        irq_set_mask(0x77);
-
-        // Allow all IRQs.
-        //
-        // This liberis function uses the V810's hardware IRQ numbering,
-        // see FXGA_GA and FXGABOAD documents for more info ...
-        irq_set_level(8);
-
-        // Enable V810 CPU's interrupt handling.
-        irq_enable();
-
-        eris_low_sup_setreg(0, 5, 0xC8);  // Set Hu6270 BG to show, and VSYNC Interrupt
-
-	eris_bkupmem_set_access(1,1);
-}
-
-
-
-
-int main(int argc, char *argv[])
-{
-int tempphase;
-int rotatex;
-int rotatey;
-
-   init();
-
-   piecenum  = 0;
-   phasenum  = 0;
-   pieceposx = 3;
-   pieceposy = 8;
-
-   while (1)
-   {
-      if ((joytrg & JOY_LEFT) == JOY_LEFT)
-         if (chkmvok(piecenum, phasenum, pieceposx, pieceposy, -1, 0) == 0)
-            pieceposx--;
-
-      if ((joytrg & JOY_RIGHT) == JOY_RIGHT)
-         if (chkmvok(piecenum, phasenum, pieceposx, pieceposy, 1, 0) == 0)
-            pieceposx++;
-
-      if ((joytrg & JOY_UP) == JOY_UP)
-         if (chkmvok(piecenum, phasenum, pieceposx, pieceposy, 0, -1) == 0)
-            pieceposy--;
-
-      if ((joytrg & JOY_DOWN) == JOY_DOWN)
-         if (chkmvok(piecenum, phasenum, pieceposx, pieceposy, 0, 1) == 0)
-            pieceposy++;
-
-      if ((joytrg & JOY_I) == JOY_I) {
-         tempphase = ((phasenum + 1) & 3);
-         rotatex = (piecetbl[(int)piecenum] + tempphase)->sprite_x_rotate_adjustment;
-         rotatey = (piecetbl[(int)piecenum] + tempphase)->sprite_y_rotate_adjustment;
-
-         if (chkmvok(piecenum, tempphase, pieceposx, pieceposy, rotatex, rotatey) == 0) {
-            phasenum   = tempphase;
-            pieceposx += rotatex;
-            pieceposy += rotatey;
-         }
-      }
-
-      if ((joytrg & JOY_II) == JOY_II) {
-         tempphase = ((phasenum + 3) & 3);
-         rotatex = (piecetbl[(int)piecenum] + tempphase)->sprite_x_rotate_adjustment;
-         rotatey = (piecetbl[(int)piecenum] + tempphase)->sprite_y_rotate_adjustment;
-
-         if (chkmvok(piecenum, tempphase, pieceposx, pieceposy, rotatex, rotatey) == 0) {
-            phasenum   = tempphase;
-            pieceposx += rotatex;
-            pieceposy += rotatey;
-         }
-      }
-
-      if ((joytrg & JOY_III) == JOY_III) {
-         if (piecenum == 6)
-            piecenum = 0;
-         else
-            piecenum++;
-      }
-
-      if ((joytrg & JOY_IV) == JOY_IV) {
-	 if (piecenum == 0)
-            piecenum = 6;
-         else
-            piecenum--;
-      }
-
-      setpiece();
-
-
-      disp_playfield();
-
-      if ((joytrg & JOY_RUN) == JOY_RUN) {
-         pause();
-         gameover();
-      }
-
-      vsync(0);
+   for(i = 0; i < 16; i++) {
+      microprog[i] = KING_CODE_NOP;
    }
 
-   return 0;
+   microprog[0] = KING_CODE_BG0_CG_0;
+   eris_king_disable_microprogram();
+   eris_king_write_microprogram(microprog, 0, 16);
+   eris_king_enable_microprogram();
+
+
+   // Set up palette entries
+   //
+   for (i = 0; i < 128; i++) {
+      eris_tetsu_set_palette(i, CG_palette[i]);
+      eris_tetsu_set_palette(i+256, SPR_palette[i]);
+   }
+
+//   eris_tetsu_set_video_mode(TETSU_LINES_262, 0, TETSU_DOTCLOCK_7MHz, TETSU_COLORS_16,
+   eris_tetsu_set_video_mode(TETSU_LINES_262, 0, TETSU_DOTCLOCK_5MHz, TETSU_COLORS_16,
+                             TETSU_COLORS_16, 1, 1, 0, 0, 0, 0, 0);
+   eris_king_set_bat_cg_addr(KING_BG0, 0, 0);
+   eris_king_set_bat_cg_addr(KING_BG0SUB, 0, 0);
+   eris_king_set_scroll(KING_BG0, 0, 0);
+   eris_king_set_bg_size(KING_BG0, KING_BGSIZE_256, KING_BGSIZE_256, KING_BGSIZE_256, KING_BGSIZE_256);
+
+   eris_low_sup_set_control(0, 0, 1, 1);
+
+   eris_low_sup_set_access_width(0, 0, SUP_LOW_MAP_64X32, 0, 0);
+   eris_low_sup_set_scroll(0, 0, 0);
+   eris_low_sup_set_video_mode(0, 2, 2, 4, 0x1F, 0x11, 2, 239, 2); // 5MHz numbers
+//   eris_low_sup_set_video_mode(0, 3, 3, 6, 0x2B, 0x11, 2, 239, 2); // 7MHz numbers
+
+   eris_king_set_kram_read(0, 1);
+   eris_king_set_kram_write(0, 1);
+
+   // Clear BG0's RAM
+   for(i = 0; i < 0x1E00; i++) {
+      eris_king_kram_write(0);
+   }
+   eris_king_set_kram_write(0, 1);
+
+//   eris_low_sup_set_vram_write(0, 0);
+//   for(i = 0; i < 0x800; i++) {
+//      eris_low_sup_vram_write(0, 0x120); // 0x80 is space
+//   }
+
+
+   // load font into video memory
+   // font background/foreground should be subpalettes #0 and #3 respectively
+   //
+   eris_low_sup_set_vram_write(0, 0x1200);
+
+   for(i = 0; i < 0x60; i++) {
+      // first 2 planes of color
+      for (j = 0; j < 8; j++) {
+         img = font[(i*8)+j] & 0xff;
+         a = (img << 8) | img;
+         eris_low_sup_vram_write(0, a);
+      }
+      // last 2 planes of color
+      for (j = 0; j < 8; j++) {
+         eris_low_sup_vram_write(0, 0);
+      }
+   }
+
+   // load CG background gfx into VRAM
+   //
+   load_vram(VDC0, offchr.data,    offchr.vidaddr,    offchr.size);
+   load_vram(VDC0, bkchr1.data,    bkchr1.vidaddr,    bkchr1.size);
+   load_vram(VDC0, bkchr2.data,    bkchr2.vidaddr,    bkchr2.size);
+   load_vram(VDC0, cornerchr.data, cornerchr.vidaddr, cornerchr.size);
+   load_vram(VDC0, endchr.data,    endchr.vidaddr,    endchr.size);
+   load_vram(VDC0, bottomchr.data, bottomchr.vidaddr, bottomchr.size);
+   load_vram(VDC0, fullchr.data,   fullchr.vidaddr,   fullchr.size);
+
+   load_vram(VDC0, p0ph0_data,     SPR_P0PH0VRAM,     sizeof(p0ph0_data));
+   load_vram(VDC0, p0ph1_data,     SPR_P0PH1VRAM,     sizeof(p0ph1_data));
+   load_vram(VDC0, p0ph2_data,     SPR_P0PH2VRAM,     sizeof(p0ph2_data));
+   load_vram(VDC0, p0ph3_data,     SPR_P0PH3VRAM,     sizeof(p0ph3_data));
+
+   load_vram(VDC0, p1ph0_data,     SPR_P1PH0VRAM,     sizeof(p1ph0_data));
+   load_vram(VDC0, p1ph1_data,     SPR_P1PH1VRAM,     sizeof(p1ph1_data));
+   load_vram(VDC0, p1ph2_data,     SPR_P1PH2VRAM,     sizeof(p1ph2_data));
+   load_vram(VDC0, p1ph3_data,     SPR_P1PH3VRAM,     sizeof(p1ph3_data));
+
+   load_vram(VDC0, p2ph0_data,     SPR_P2PH0VRAM,     sizeof(p2ph0_data));
+   load_vram(VDC0, p2ph1_data,     SPR_P2PH1VRAM,     sizeof(p2ph1_data));
+   load_vram(VDC0, p2ph2_data,     SPR_P2PH2VRAM,     sizeof(p2ph2_data));
+   load_vram(VDC0, p2ph3_data,     SPR_P2PH3VRAM,     sizeof(p2ph3_data));
+
+   load_vram(VDC0, p3ph0_data,     SPR_P3PH0VRAM,     sizeof(p3ph0_data));
+   load_vram(VDC0, p3ph1_data,     SPR_P3PH1VRAM,     sizeof(p3ph1_data));
+
+   load_vram(VDC0, p4ph0_data,     SPR_P4PH0VRAM,     sizeof(p4ph0_data));
+   load_vram(VDC0, p4ph1_data,     SPR_P4PH1VRAM,     sizeof(p4ph1_data));
+
+   load_vram(VDC0, p5ph0_data,     SPR_P5PH0VRAM,     sizeof(p5ph0_data));
+   load_vram(VDC0, p5ph1_data,     SPR_P5PH1VRAM,     sizeof(p5ph1_data));
+
+   load_vram(VDC0, p6ph0_data,     SPR_P6PH0VRAM,     sizeof(p6ph0_data));
+
+   load_vram(VDC0, p7ph0_data,     SPR_P7PH0VRAM,     sizeof(p7ph0_data));
+
+
+   //
+   //
+   eris_pad_init(0); // initialize joypad
+
+
+   // Disable all interrupts before changing handlers.
+   irq_set_mask(0x7F);
+
+   // Replace firmware IRQ handlers for the Timer and HuC6270-A.
+   //
+   // This liberis function uses the V810's hardware IRQ numbering,
+   // see FXGA_GA and FXGABOAD documents for more info ...
+   irq_set_raw_handler(0xC, my_vblank_irq);
+
+   // Enable Timer and HuC6270-A interrupts.
+   //
+   // d6=Timer
+   // d5=External
+   // d4=KeyPad
+   // d3=HuC6270-A
+   // d2=HuC6272
+   // d1=HuC6270-B
+   // d0=HuC6273
+   irq_set_mask(0x77);
+
+   // Allow all IRQs.
+   //
+   // This liberis function uses the V810's hardware IRQ numbering,
+   // see FXGA_GA and FXGABOAD documents for more info ...
+   irq_set_level(8);
+
+   // Enable V810 CPU's interrupt handling.
+   irq_enable();
+
+   eris_low_sup_setreg(VDC0, 5, 0xC8);  // Set Hu6270 BG to show, and VSYNC Interrupt
+
+   eris_bkupmem_set_access(1,1);
 }
+
 
 // print with first 7up (HuC6270 #0)
 //
@@ -1118,10 +1214,10 @@ u16 a;
 
    i = (y * 64) + x;
 
-   eris_low_sup_set_vram_write(0, i);
+   eris_low_sup_set_vram_write(VDC0, i);
    for (i = 0; i < strlen8(str); i++) {
       a = (pal * 0x1000) + str[i] + 0x100;
-      eris_low_sup_vram_write(0, a);
+      eris_low_sup_vram_write(VDC0, a);
    }
 }
 
