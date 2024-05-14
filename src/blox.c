@@ -176,6 +176,7 @@ void display_score(void);
 void disp_playfield(void);
 int chkmvok(int type, int phase, int xpos, int ypos, int xdelta, int ydelta);
 void init(void);
+void testlines(void);
 
 void print_at(int x, int y, int pal, char* str);
 
@@ -224,18 +225,27 @@ char *gameovermsg1 = "GAME";
 char *gameovermsg2 = "OVER";
 
 int  levelval;
+char scoreval[6];
+char nxtlvlscr[6];
+
 int  frampermov;
 int  fpmcount;
-char scoreval[6];
 
 
 char displn[24][FIELDWIDTH];
 
+//int joyrptval;
+//int joyfrminit;
+//int joyfrmsubs;
+//int joyout;
+
+
 char pieceposx;
 char pieceposy;
-char phasenum;
 char piecenum;
+char phasenum;
 
+int deletelines;
 
 
 
@@ -311,6 +321,15 @@ const uint16_t SPR_palette[] = {
 #define FULLCHR_PAL		0
 
 
+#include "offchr_data.gen_data"
+#include "bkchr1_data.gen_data"
+#include "bkchr2_data.gen_data"
+#include "cornerchr_data.gen_data"
+#include "endchr_data.gen_data"
+#include "bottomchr_data.gen_data"
+#include "fullchr_data.gen_data"
+
+
 
 #define SPR_P0PH0VRAM	(SPR_VRAMLOC)
 #define SPR_P0PH1VRAM	(SPR_P0PH0VRAM+SPR_32x32CELL)
@@ -341,6 +360,36 @@ const uint16_t SPR_palette[] = {
 #define SPR_P7PH0VRAM	(SPR_P6PH0VRAM+SPR_32x32CELL)
 
 
+#include "p0ph0_data.gen_data"
+#include "p0ph1_data.gen_data"
+#include "p0ph2_data.gen_data"
+#include "p0ph3_data.gen_data"
+
+#include "p1ph0_data.gen_data"
+#include "p1ph1_data.gen_data"
+#include "p1ph2_data.gen_data"
+#include "p1ph3_data.gen_data"
+
+#include "p2ph0_data.gen_data"
+#include "p2ph1_data.gen_data"
+#include "p2ph2_data.gen_data"
+#include "p2ph3_data.gen_data"
+
+#include "p3ph0_data.gen_data"
+#include "p3ph1_data.gen_data"
+
+#include "p4ph0_data.gen_data"
+#include "p4ph1_data.gen_data"
+
+#include "p5ph0_data.gen_data"
+#include "p5ph1_data.gen_data"
+
+#include "p6ph0_data.gen_data"
+
+#include "p7ph0_data.gen_data"
+
+
+
 typedef struct BgChars
 {
    uint16_t pal;
@@ -350,6 +399,48 @@ typedef struct BgChars
    uint16_t size;
 } Bgchr;
 
+// offchr character pattern = 8x8 all 0's:
+//
+const Bgchr offchr =
+{ OFFCHR_PAL, OFFCHR_VRAMLOC, CHRREF(OFFCHR_PAL, OFFCHR_VRAMLOC), offchr_data, sizeof(offchr_data) };
+
+// bkchr1 character color pattern = 8x8 all 3's:
+//
+const Bgchr bkchr1 =
+{ BKCHR1_PAL, BKCHR1_VRAMLOC, CHRREF(BKCHR1_PAL, BKCHR1_VRAMLOC), bkchr1_data, sizeof(bkchr1_data) };
+
+// bkchr2 character color pattern = 8x8 all 4's:
+//
+const Bgchr bkchr2 =
+{ BKCHR2_PAL, BKCHR2_VRAMLOC, CHRREF(BKCHR2_PAL, BKCHR2_VRAMLOC), bkchr2_data, sizeof(bkchr2_data) };
+
+// cornerchr character color pattern = 8x8 all zeroes, except 1's on top edge and left edge:
+//
+const Bgchr cornerchr =
+{ CORNERCHR_PAL, CORNERCHR_VRAMLOC, CHRREF(CORNERCHR_PAL, CORNERCHR_VRAMLOC), cornerchr_data, sizeof(cornerchr_data) };
+
+// endchr character color pattern = 8x8 all 0's except 1's on left edge:
+//
+const Bgchr endchr =
+{ ENDCHR_PAL, ENDCHR_VRAMLOC, CHRREF(ENDCHR_PAL, ENDCHR_VRAMLOC), endchr_data, sizeof(endchr_data) };
+
+// bottomchr character color pattern = 8x8 all 0's except 1's on top edge:
+//
+const Bgchr bottomchr =
+{ BOTTOMCHR_PAL, BOTTOMCHR_VRAMLOC, CHRREF(BOTTOMCHR_PAL, BOTTOMCHR_VRAMLOC), bottomchr_data, sizeof(bottomchr_data) };
+
+// fullchr character color pattern:
+// 11111113
+// 21111133
+// 22555533
+// 22555533
+// 22555533
+// 22555533
+// 22444443
+// 24444444
+//
+const Bgchr fullchr =
+{ FULLCHR_PAL, FULLCHR_VRAMLOC, CHRREF(FULLCHR_PAL, FULLCHR_VRAMLOC), fullchr_data, sizeof(fullchr_data) };
 
 
 // Piece orientation information:
@@ -359,7 +450,6 @@ typedef struct BgChars
 //
 // sprite_x_rotate_adjustment (and y) is only used for piece #2, to
 // compensate for its special rotation (around its second square)
-//
 //
 //
 // game pieces' data
@@ -446,135 +536,6 @@ const piecephasedata * piecetbl[7] = {
 };
 
 
-
-#include "offchr_data.gen_data"
-#include "bkchr1_data.gen_data"
-#include "bkchr2_data.gen_data"
-#include "cornerchr_data.gen_data"
-#include "endchr_data.gen_data"
-#include "bottomchr_data.gen_data"
-#include "fullchr_data.gen_data"
-
-#include "p0ph0_data.gen_data"
-#include "p0ph1_data.gen_data"
-#include "p0ph2_data.gen_data"
-#include "p0ph3_data.gen_data"
-
-#include "p1ph0_data.gen_data"
-#include "p1ph1_data.gen_data"
-#include "p1ph2_data.gen_data"
-#include "p1ph3_data.gen_data"
-
-#include "p2ph0_data.gen_data"
-#include "p2ph1_data.gen_data"
-#include "p2ph2_data.gen_data"
-#include "p2ph3_data.gen_data"
-
-#include "p3ph0_data.gen_data"
-#include "p3ph1_data.gen_data"
-
-#include "p4ph0_data.gen_data"
-#include "p4ph1_data.gen_data"
-
-#include "p5ph0_data.gen_data"
-#include "p5ph1_data.gen_data"
-
-#include "p6ph0_data.gen_data"
-
-#include "p7ph0_data.gen_data"
-
-
-
-// offchr character color pattern:
-// 00000000
-// 00000000
-// 00000000
-// 00000000
-// 00000000
-// 00000000
-// 00000000
-// 00000000
-//
-const Bgchr offchr =
-{ OFFCHR_PAL, OFFCHR_VRAMLOC, CHRREF(OFFCHR_PAL, OFFCHR_VRAMLOC), offchr_data, sizeof(offchr_data) };
-
-// bkchr1 character color pattern:
-// 33333333
-// 33333333
-// 33333333
-// 33333333
-// 33333333
-// 33333333
-// 33333333
-// 33333333
-//
-const Bgchr bkchr1 =
-{ BKCHR1_PAL, BKCHR1_VRAMLOC, CHRREF(BKCHR1_PAL, BKCHR1_VRAMLOC), bkchr1_data, sizeof(bkchr1_data) };
-
-// bkchr2 character color pattern:
-// 44444444
-// 44444444
-// 44444444
-// 44444444
-// 44444444
-// 44444444
-// 44444444
-// 44444444
-//
-const Bgchr bkchr2 =
-{ BKCHR2_PAL, BKCHR2_VRAMLOC, CHRREF(BKCHR2_PAL, BKCHR2_VRAMLOC), bkchr2_data, sizeof(bkchr2_data) };
-
-// cornerchr character color pattern:
-// 11111111
-// 10000000
-// 10000000
-// 10000000
-// 10000000
-// 10000000
-// 10000000
-// 10000000
-//
-const Bgchr cornerchr =
-{ CORNERCHR_PAL, CORNERCHR_VRAMLOC, CHRREF(CORNERCHR_PAL, CORNERCHR_VRAMLOC), cornerchr_data, sizeof(cornerchr_data) };
-
-// endchr character color pattern:
-// 10000000
-// 10000000
-// 10000000
-// 10000000
-// 10000000
-// 10000000
-// 10000000
-// 10000000
-//
-const Bgchr endchr =
-{ ENDCHR_PAL, ENDCHR_VRAMLOC, CHRREF(ENDCHR_PAL, ENDCHR_VRAMLOC), endchr_data, sizeof(endchr_data) };
-
-// bottomchr character color pattern:
-// 11111111
-// 00000000
-// 00000000
-// 00000000
-// 00000000
-// 00000000
-// 00000000
-// 00000000
-//
-const Bgchr bottomchr =
-{ BOTTOMCHR_PAL, BOTTOMCHR_VRAMLOC, CHRREF(BOTTOMCHR_PAL, BOTTOMCHR_VRAMLOC), bottomchr_data, sizeof(bottomchr_data) };
-
-// fullchr character color pattern:
-// 11111113
-// 21111133
-// 22555533
-// 22555533
-// 22555533
-// 22555533
-// 22444443
-// 24444444
-//
-const Bgchr fullchr =
-{ FULLCHR_PAL, FULLCHR_VRAMLOC, CHRREF(FULLCHR_PAL, FULLCHR_VRAMLOC), fullchr_data, sizeof(fullchr_data) };
 
 
 ///////////////////////////////// Joypad routines
@@ -669,8 +630,12 @@ int main(int argc, char *argv[])
 int tempphase;
 int rotatex;
 int rotatey;
+int flg;
+
 
    init();
+
+//TODO:  Initialize random number generator
 
    init_score();
 
@@ -681,19 +646,22 @@ int rotatey;
    vsync(0);
 
    disp_bkgnd();
-
    display_score();
+   disp_playfield();
 
+//TODO:  Get a random piece number
    piecenum  = 0;
-//   phasenum  = 0;
-//   pieceposx = 3;
-//   pieceposy = 8;
    setpiece();
 
    fpmcount = frampermov;
 
    while (1)
    {
+//TODO:  More randomization
+
+      flg = 0;
+      deletelines = 0;
+
       if ((joytrg & JOY_LEFT) == JOY_LEFT)
          if (chkmvok(piecenum, phasenum, pieceposx, pieceposy, -1, 0) == 0)
             pieceposx--;
@@ -706,9 +674,12 @@ int rotatey;
          if (chkmvok(piecenum, phasenum, pieceposx, pieceposy, 0, -1) == 0)
             pieceposy--;
 
-      if ((joytrg & JOY_DOWN) == JOY_DOWN)
+      if ((joytrg & JOY_DOWN) == JOY_DOWN) {
          if (chkmvok(piecenum, phasenum, pieceposx, pieceposy, 0, 1) == 0)
             pieceposy++;
+         else
+            flg = 1;
+      }
 
       if ((joytrg & JOY_I) == JOY_I) {
          tempphase = ((phasenum + 1) & 3);
@@ -748,9 +719,10 @@ int rotatey;
             piecenum--;
       }
 
+      
       setsprvars();
 
-
+      display_score();
       disp_playfield();
 
       if ((joytrg & JOY_RUN) == JOY_RUN) {
@@ -762,11 +734,16 @@ int rotatey;
 
       if (fpmcount == 0) {
          fpmcount = frampermov;
-         if (chkmvok(piecenum, phasenum, pieceposx, pieceposy, 0, 1) == 0) {
+         if ((flg == 0) && (chkmvok(piecenum, phasenum, pieceposx, pieceposy, 0, 1) == 0)) {
             pieceposy++;
 	 }
          else {
             snapshot(piecenum, phasenum, pieceposx, pieceposy);
+// reset auto-repeat
+            // check if any part is still in the 'hidden' area at the top
+            // if so, "game over"
+
+            testlines();
 	    nxtpiece();
 	 }
       }
@@ -776,6 +753,41 @@ int rotatey;
 
    return 0;
 }
+
+void testlines(void)
+{
+int i, j, k;
+int flg;
+
+   for (i = (FIELDHEIGHT+FIELDHIDHT - 1); i > 0; i--) {
+      flg = 0;
+
+      for (j = 0; j < FIELDWIDTH; j++) {
+         if (displn[i][j] == 0)
+            flg = 1;
+      }
+
+      if (flg != 1) {
+         for (k = i; k > 0; k--) {
+            for (j = 0; j < FIELDWIDTH; j++) {
+               displn[k][j] = displn[k-1][j];
+            }
+         }
+         deletelines++;
+	 i = i + 1;  // the last line will need to be rechecked
+      }
+   }
+   while (deletelines > 0) {
+      scoreval[4]++;
+      deletelines--;
+      for (i = 4; i >= 0; i--) {
+         if (scoreval[i] > '9') {
+            scoreval[i] = scoreval[i] - 10;
+            scoreval[i-1]++;
+         }
+      }
+   }
+}	
 
 void setpiece(void)
 {
@@ -812,8 +824,9 @@ int blockptnctrl;
 
 void nxtpiece(void)
 {
-// get a random number from 0 to 6
+// actually, this should get a random number from 0 to 6
    piecenum++;
+
    if (piecenum > 6)
       piecenum = 0;
    setpiece();
@@ -989,6 +1002,12 @@ int addr;
          eris_low_sup_vram_write(VDC0, offchr.ref);
       }
    }
+
+// Move sprite 2 off screen:
+//
+   eris_sup_set(VDC0);
+   eris_sup_spr_set(2);
+   eris_sup_spr_xy(0,0);
 }
 
 void disp_playfield(void)
