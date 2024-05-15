@@ -226,13 +226,12 @@ char *gameovermsg2 = "OVER";
 
 int  levelval;
 char scoreval[6];
-char nxtlvlscr[6];
 
 int  frampermov;
 int  fpmcount;
 
 
-char displn[24][FIELDWIDTH];
+char displn[(FIELDHEIGHT+FIELDHIDHT)][FIELDWIDTH];
 
 //int joyrptval;
 //int joyfrminit;
@@ -637,118 +636,135 @@ int flg;
 
 //TODO:  Initialize random number generator
 
-   init_score();
 
-   clear_display_field();
-
-   frampermov = diff_level[0].vsyncs;
-
-   vsync(0);
-
-   disp_bkgnd();
-   display_score();
-   disp_playfield();
-
-//TODO:  Get a random piece number
-   piecenum  = 0;
-   setpiece();
-
-   fpmcount = frampermov;
-
-   while (1)
+   while (1)     // This is a loop for games (each iteration is a game)
    {
-//TODO:  More randomization
+      init_score();
 
-      flg = 0;
-      deletelines = 0;
+      clear_display_field();
 
-      if ((joytrg & JOY_LEFT) == JOY_LEFT)
-         if (chkmvok(piecenum, phasenum, pieceposx, pieceposy, -1, 0) == 0)
-            pieceposx--;
+      levelval = 0;
+      frampermov = diff_level[levelval].vsyncs;
 
-      if ((joytrg & JOY_RIGHT) == JOY_RIGHT)
-         if (chkmvok(piecenum, phasenum, pieceposx, pieceposy, 1, 0) == 0)
-            pieceposx++;
+      vsync(0);
 
-      if ((joytrg & JOY_UP) == JOY_UP)
-         if (chkmvok(piecenum, phasenum, pieceposx, pieceposy, 0, -1) == 0)
-            pieceposy--;
-
-      if ((joytrg & JOY_DOWN) == JOY_DOWN) {
-         if (chkmvok(piecenum, phasenum, pieceposx, pieceposy, 0, 1) == 0)
-            pieceposy++;
-         else
-            flg = 1;
-      }
-
-      if ((joytrg & JOY_I) == JOY_I) {
-         tempphase = ((phasenum + 1) & 3);
-         rotatex = (piecetbl[(int)piecenum] + tempphase)->sprite_x_rotate_adjustment;
-         rotatey = (piecetbl[(int)piecenum] + tempphase)->sprite_y_rotate_adjustment;
-
-         if (chkmvok(piecenum, tempphase, pieceposx, pieceposy, rotatex, rotatey) == 0) {
-            phasenum   = tempphase;
-            pieceposx += rotatex;
-            pieceposy += rotatey;
-         }
-      }
-
-      if ((joytrg & JOY_II) == JOY_II) {
-         tempphase = ((phasenum + 3) & 3);
-         rotatex = (piecetbl[(int)piecenum] + tempphase)->sprite_x_rotate_adjustment;
-         rotatey = (piecetbl[(int)piecenum] + tempphase)->sprite_y_rotate_adjustment;
-
-         if (chkmvok(piecenum, tempphase, pieceposx, pieceposy, rotatex, rotatey) == 0) {
-            phasenum   = tempphase;
-            pieceposx += rotatex;
-            pieceposy += rotatey;
-         }
-      }
-
-      if ((joytrg & JOY_III) == JOY_III) {
-         if (piecenum == 6)
-            piecenum = 0;
-         else
-            piecenum++;
-      }
-
-      if ((joytrg & JOY_IV) == JOY_IV) {
-	 if (piecenum == 0)
-            piecenum = 6;
-         else
-            piecenum--;
-      }
-
-      
-      setsprvars();
-
+      disp_bkgnd();
       display_score();
       disp_playfield();
 
-      if ((joytrg & JOY_RUN) == JOY_RUN) {
-         pause();
-         gameover();
-      }
+//TODO:  Get a random piece number
+      piecenum  = 0;
+      setpiece();
 
-      fpmcount--;
+      fpmcount = frampermov;
 
-      if (fpmcount == 0) {
-         fpmcount = frampermov;
-         if ((flg == 0) && (chkmvok(piecenum, phasenum, pieceposx, pieceposy, 0, 1) == 0)) {
-            pieceposy++;
-	 }
-         else {
-            snapshot(piecenum, phasenum, pieceposx, pieceposy);
+      while (1)     // This is a loop for vsyncs within a game
+      {
+//TODO:  More randomization
+
+         flg = 0;
+         deletelines = 0;
+
+         if ((joytrg & JOY_LEFT) == JOY_LEFT)
+            if (chkmvok(piecenum, phasenum, pieceposx, pieceposy, -1, 0) == 0)
+               pieceposx--;
+
+         if ((joytrg & JOY_RIGHT) == JOY_RIGHT)
+            if (chkmvok(piecenum, phasenum, pieceposx, pieceposy, 1, 0) == 0)
+               pieceposx++;
+
+         if ((joytrg & JOY_UP) == JOY_UP)
+            if (chkmvok(piecenum, phasenum, pieceposx, pieceposy, 0, -1) == 0)
+               pieceposy--;
+
+         if ((joytrg & JOY_DOWN) == JOY_DOWN) {
+            if (chkmvok(piecenum, phasenum, pieceposx, pieceposy, 0, 1) == 0)
+               pieceposy++;
+            else
+               flg = 1;
+         }
+
+         if ((joytrg & JOY_I) == JOY_I) {
+            tempphase = ((phasenum + 1) & 3);
+            rotatex = (piecetbl[(int)piecenum] + tempphase)->sprite_x_rotate_adjustment;
+            rotatey = (piecetbl[(int)piecenum] + tempphase)->sprite_y_rotate_adjustment;
+
+            if (chkmvok(piecenum, tempphase, pieceposx, pieceposy, rotatex, rotatey) == 0) {
+               phasenum   = tempphase;
+               pieceposx += rotatex;
+               pieceposy += rotatey;
+            }
+         }
+
+         if ((joytrg & JOY_II) == JOY_II) {
+            tempphase = ((phasenum + 3) & 3);
+            rotatex = (piecetbl[(int)piecenum] + tempphase)->sprite_x_rotate_adjustment;
+            rotatey = (piecetbl[(int)piecenum] + tempphase)->sprite_y_rotate_adjustment;
+
+            if (chkmvok(piecenum, tempphase, pieceposx, pieceposy, rotatex, rotatey) == 0) {
+               phasenum   = tempphase;
+               pieceposx += rotatex;
+               pieceposy += rotatey;
+            }
+         }
+
+         if ((joytrg & JOY_III) == JOY_III) {
+            if (piecenum == 6)
+               piecenum = 0;
+            else
+               piecenum++;
+         }
+
+         if ((joytrg & JOY_IV) == JOY_IV) {
+            if (piecenum == 0)
+               piecenum = 6;
+            else
+               piecenum--;
+         }
+
+         setsprvars();
+
+         display_score();
+         disp_playfield();
+
+         if ((joytrg & JOY_RUN) == JOY_RUN) {
+            pause();
+         }
+
+         fpmcount--;
+
+         if (fpmcount == 0) {
+
+            // check if score exceeds threshold to increase difficulty
+            if (strcmp(scoreval, diff_level[levelval].score) >= 0) {
+               levelval++;
+               frampermov = diff_level[levelval].vsyncs;
+            }
+
+            fpmcount = frampermov;
+
+            if ((flg == 0) && (chkmvok(piecenum, phasenum, pieceposx, pieceposy, 0, 1) == 0)) {
+               pieceposy++;
+            }
+            else {
+               snapshot(piecenum, phasenum, pieceposx, pieceposy);
 // reset auto-repeat
-            // check if any part is still in the 'hidden' area at the top
-            // if so, "game over"
 
-            testlines();
-	    nxtpiece();
-	 }
+               // check if any part is still in the 'hidden' area at the top
+               // if so, "game over"
+               if (pieceposy < FIELDHIDHT) {
+                  gameover();
+                  break;
+               }
+               else {
+                  testlines();
+                  nxtpiece();
+               }
+            }
+         }
+
+         vsync(0);
       }
-
-      vsync(0);
    }
 
    return 0;
