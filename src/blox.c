@@ -162,23 +162,26 @@ typedef enum {
 
 
 
+void print_text(VDCNUM vdc, int x_pos, int y_pos, int palette, char *mesg, int maxlen);
+void wait_joypad_run(void);
+void disp_blank_playfield(void);
 void vsync(int numframes);
 void pause(void);
-void gameover(void);
+void game_over(void);
+void sensejoy(void);
+void joypadmv(void);
 void setpiece(void);
 void setsprvars(void);
 void nxtpiece(void);
 void snapshot(int type, int phase, int xpos, int ypos);
 void init_score(void);
 void clear_display_field(void);
-void disp_bkgnd(void);
+void dispbkgnd(void);
 void display_score(void);
 void disp_playfield(void);
 int chkmvok(int type, int phase, int xpos, int ypos, int xdelta, int ydelta);
 void init(void);
 void testlines(void);
-
-void print_at(int x, int y, int pal, char* str);
 
 extern u8 font[];
 
@@ -233,12 +236,14 @@ int  fpmcount;
 
 char displn[(FIELDHEIGHT+FIELDHIDHT)][FIELDWIDTH];
 
-//int joyrptval;
-//int joyfrminit;
-//int joyfrmsubs;
-//int joyout;
+// joypad repeat values
+//
+int joyrptval;
+int joyfrminit;
+int joyfrmsubs;
+int joyout;
 
-
+// piece type, rotation, position
 char pieceposx;
 char pieceposy;
 char piecenum;
@@ -545,7 +550,8 @@ volatile u32 joytrg;
 
 __attribute__ ((noinline)) void joyread(void)
 {
-//u32 temp;
+// assume that this is a joypad and not a mouse
+// Maybe need to fix this later
 
    joypad_last = joypad;
 
@@ -626,12 +632,6 @@ int i;
 
 int main(int argc, char *argv[])
 {
-int tempphase;
-int rotatex;
-int rotatey;
-int flg;
-
-
    init();
 
 //TODO:  Initialize random number generator
@@ -639,99 +639,53 @@ int flg;
 
    while (1)     // This is a loop for games (each iteration is a game)
    {
+
+      // intialization
+      //
       init_score();
 
       clear_display_field();
 
+      // set initial difficulty level
+      //
       levelval = 0;
       frampermov = diff_level[levelval].vsyncs;
 
+      // Wait for a vsync to reduce initial screen flash
+      //
       vsync(0);
 
-      disp_bkgnd();
+      // display startup screen
+      //
+      dispbkgnd();
       display_score();
       disp_playfield();
 
 //TODO:  Get a random piece number
       piecenum  = 0;
+
       setpiece();
 
+      // set countdown interval - number of frames until piece moves downward
+      //
       fpmcount = frampermov;
 
       while (1)     // This is a loop for vsyncs within a game
       {
-//TODO:  More randomization
-
-         flg = 0;
          deletelines = 0;
 
-         if ((joytrg & JOY_LEFT) == JOY_LEFT)
-            if (chkmvok(piecenum, phasenum, pieceposx, pieceposy, -1, 0) == 0)
-               pieceposx--;
+//TODO:  More randomization
 
-         if ((joytrg & JOY_RIGHT) == JOY_RIGHT)
-            if (chkmvok(piecenum, phasenum, pieceposx, pieceposy, 1, 0) == 0)
-               pieceposx++;
+         sensejoy();      // figure out joypad auto-repeat
+         joypadmv();      // move
 
-         if ((joytrg & JOY_UP) == JOY_UP)
-            if (chkmvok(piecenum, phasenum, pieceposx, pieceposy, 0, -1) == 0)
-               pieceposy--;
-
-         if ((joytrg & JOY_DOWN) == JOY_DOWN) {
-            if (chkmvok(piecenum, phasenum, pieceposx, pieceposy, 0, 1) == 0)
-               pieceposy++;
-            else
-               flg = 1;
-         }
-
-         if ((joytrg & JOY_I) == JOY_I) {
-            tempphase = ((phasenum + 1) & 3);
-            rotatex = (piecetbl[(int)piecenum] + tempphase)->sprite_x_rotate_adjustment;
-            rotatey = (piecetbl[(int)piecenum] + tempphase)->sprite_y_rotate_adjustment;
-
-            if (chkmvok(piecenum, tempphase, pieceposx, pieceposy, rotatex, rotatey) == 0) {
-               phasenum   = tempphase;
-               pieceposx += rotatex;
-               pieceposy += rotatey;
-            }
-         }
-
-         if ((joytrg & JOY_II) == JOY_II) {
-            tempphase = ((phasenum + 3) & 3);
-            rotatex = (piecetbl[(int)piecenum] + tempphase)->sprite_x_rotate_adjustment;
-            rotatey = (piecetbl[(int)piecenum] + tempphase)->sprite_y_rotate_adjustment;
-
-            if (chkmvok(piecenum, tempphase, pieceposx, pieceposy, rotatex, rotatey) == 0) {
-               phasenum   = tempphase;
-               pieceposx += rotatex;
-               pieceposy += rotatey;
-            }
-         }
-
-         if ((joytrg & JOY_III) == JOY_III) {
-            if (piecenum == 6)
-               piecenum = 0;
-            else
-               piecenum++;
-         }
-
-         if ((joytrg & JOY_IV) == JOY_IV) {
-            if (piecenum == 0)
-               piecenum = 6;
-            else
-               piecenum--;
-         }
-
-         setsprvars();
-
-         display_score();
-         disp_playfield();
+         joyout = 0;      // reset
 
          if ((joytrg & JOY_RUN) == JOY_RUN) {
             pause();
          }
 
-         fpmcount--;
+         fpmcount--;      // is it time to move pice down ?
 
          if (fpmcount == 0) {
 
@@ -741,27 +695,33 @@ int flg;
                frampermov = diff_level[levelval].vsyncs;
             }
 
-            fpmcount = frampermov;
+            fpmcount = frampermov;     // reset down-counter
 
-            if ((flg == 0) && (chkmvok(piecenum, phasenum, pieceposx, pieceposy, 0, 1) == 0)) {
+            // move pirce downward (if possible)
+            if (chkmvok(piecenum, phasenum, pieceposx, pieceposy, 0, 1) == 0) {
                pieceposy++;
             }
             else {
+               // transfer to background
                snapshot(piecenum, phasenum, pieceposx, pieceposy);
-// reset auto-repeat
 
                // check if any part is still in the 'hidden' area at the top
                // if so, "game over"
-               if (pieceposy < FIELDHIDHT) {
-                  gameover();
+               if (pieceposy < FIELDHIDHT) {     // are any of the current piece's squares in the hidden area ?
+                  game_over();                   // yes, it's game_over
                   break;
                }
                else {
-                  testlines();
-                  nxtpiece();
+                  testlines();     // delete complete lines & add score
+                  nxtpiece();      // set next piece
                }
             }
          }
+
+         setsprvars();
+
+         display_score();
+         disp_playfield();
 
          vsync(0);
       }
@@ -770,72 +730,121 @@ int flg;
    return 0;
 }
 
-void testlines(void)
+void pause(void)
 {
-int i, j, k;
-int flg;
+int palette = 0;
 
-   for (i = (FIELDHEIGHT+FIELDHIDHT - 1); i > 0; i--) {
-      flg = 0;
+   disp_blank_playfield();
 
-      for (j = 0; j < FIELDWIDTH; j++) {
-         if (displn[i][j] == 0)
-            flg = 1;
-      }
+   print_text(VDC0, PAUSEMSGX, PAUSEMSGY, palette, pausemsg, 5);
 
-      if (flg != 1) {
-         for (k = i; k > 0; k--) {
-            for (j = 0; j < FIELDWIDTH; j++) {
-               displn[k][j] = displn[k-1][j];
-            }
-         }
-         deletelines++;
-	 i = i + 1;  // the last line will need to be rechecked
-      }
-   }
-   while (deletelines > 0) {
-      scoreval[4]++;
-      deletelines--;
-      for (i = 4; i >= 0; i--) {
-         if (scoreval[i] > '9') {
-            scoreval[i] = scoreval[i] - 10;
-            scoreval[i-1]++;
-         }
-      }
-   }
-}	
+   wait_joypad_run();
 
-void setpiece(void)
-{
-   phasenum = 0;
-   pieceposy = FIELDHIDHT - (piecetbl[(int)piecenum] + phasenum)->height;
-   pieceposx = (FIELDWIDTH - (piecetbl[(int)piecenum] + phasenum)->width) >> 1;
-   setsprvars();
+   disp_playfield();
 }
 
-void setsprvars(void)
+void game_over(void)
 {
-int patterncode;
-int patternctrl;
-int blockptnctrl;
+int palette = 0;
 
+   print_text(VDC0, GAMOVRMSGX, GAMOVRMSGY, palette, gameovermsg1, 4);
+   print_text(VDC0, GAMOVRMSGX, GAMOVRMSGY+1, palette, gameovermsg2, 4);
 
-   patterncode = SPRITE_PATTERN((piecetbl[(int)piecenum] + phasenum)->sprpattern_vram_addr);
-   patternctrl = (SPRITE_Y_HEIGHT_2 | SPRITE_X_WIDTH_2 | SPRITE_PRIO_SP | (piecenum+1) );
+   wait_joypad_run();
+}
 
-   blockptnctrl = (SPRITE_Y_HEIGHT_2 | SPRITE_X_WIDTH_2 | SPRITE_PRIO_BG | 1 );  // palette doesn't actually matter
+void sensejoy(void)
+{
+int temppad;
 
-   eris_sup_set(VDC0);
+   temppad = joypad & JOYRPTMASK;
 
-// set up sprite 1 as the "invisible block":
+   if (temppad == joyrptval) {
+      if (joyfrminit >= JOYRPTINIT) {     // initial wait period is done
+         if (joyfrmsubs >= JOYRPTSUBS) {  // is it time to repeat ?
+            joyout = joyrptval;
+	    joyfrmsubs = 0;
+         }
+         else {
+            joyfrmsubs++;
+         }
+      }
+      else {
+         // wait for initial period
+         joyfrminit++;
+	 joyfrmsubs = 0;
+      }
+
+      
+   } else {
+      // different
+      joyout     = temppad;   // output keys
+      joyrptval  = temppad;   // keep for later (repeat validation)
+      joyfrminit = 0;         // init counters
+      joyfrmsubs = 0;
+   }
+}
+
+void joypadmv(void)
+{
+int tempphase;
+int rotatex;
+int rotatey;
+
+   if ((joyout & JOY_LEFT) == JOY_LEFT)
+      if (chkmvok(piecenum, phasenum, pieceposx, pieceposy, -1, 0) == 0)
+         pieceposx--;
+
+   if ((joyout & JOY_RIGHT) == JOY_RIGHT)
+      if (chkmvok(piecenum, phasenum, pieceposx, pieceposy, 1, 0) == 0)
+         pieceposx++;
+
+//   if ((joytrg & JOY_UP) == JOY_UP)
+//      if (chkmvok(piecenum, phasenum, pieceposx, pieceposy, 0, -1) == 0)
+//         pieceposy--;
+
+   if ((joyout & JOY_DOWN) == JOY_DOWN) {
+      if (chkmvok(piecenum, phasenum, pieceposx, pieceposy, 0, 1) == 0)
+         pieceposy++;
+   }
+
+   if ((joyout & JOY_I) == JOY_I) {
+      tempphase = ((phasenum + 1) & 3);
+      rotatex = (piecetbl[(int)piecenum] + tempphase)->sprite_x_rotate_adjustment;
+      rotatey = (piecetbl[(int)piecenum] + tempphase)->sprite_y_rotate_adjustment;
+
+      if (chkmvok(piecenum, tempphase, pieceposx, pieceposy, rotatex, rotatey) == 0) {
+         phasenum   = tempphase;
+         pieceposx += rotatex;
+         pieceposy += rotatey;
+      }
+   }
+
+   if ((joyout & JOY_II) == JOY_II) {
+      tempphase = ((phasenum + 3) & 3);
+      rotatex = (piecetbl[(int)piecenum] + tempphase)->sprite_x_rotate_adjustment;
+      rotatey = (piecetbl[(int)piecenum] + tempphase)->sprite_y_rotate_adjustment;
+
+      if (chkmvok(piecenum, tempphase, pieceposx, pieceposy, rotatex, rotatey) == 0) {
+         phasenum   = tempphase;
+         pieceposx += rotatex;
+         pieceposy += rotatey;
+      }
+   }
+
+//   if ((joytrg & JOY_III) == JOY_III) {
+//      if (piecenum == 6)
+//         piecenum = 0;
+//      else
+//         piecenum++;
+//   }
 //
-   eris_sup_spr_set(1);
-   eris_sup_spr_create((pieceposx * 8) + FLD_SPRXORG, FLD_SPRYORG, SPRITE_PATTERN(SPR_P7PH0VRAM), blockptnctrl);
-   
-// set up sprite 2 as the "falling block":
-//
-   eris_sup_spr_set(2);
-   eris_sup_spr_create((pieceposx * 8) + FLD_SPRXORG, (pieceposy * 8) + FLD_SPRYORG, patterncode, patternctrl);
+//   if ((joytrg & JOY_IV) == JOY_IV) {
+//      if (piecenum == 0)
+//         piecenum = 6;
+//      else
+//         piecenum--;
+//   }
 }
 
 void nxtpiece(void)
@@ -846,6 +855,14 @@ void nxtpiece(void)
    if (piecenum > 6)
       piecenum = 0;
    setpiece();
+}
+
+void setpiece(void)
+{
+   phasenum = 0;
+   pieceposy = FIELDHIDHT - (piecetbl[(int)piecenum] + phasenum)->height;
+   pieceposx = (FIELDWIDTH - (piecetbl[(int)piecenum] + phasenum)->width) >> 1;
+   setsprvars();
 }
 
 int chkmvok(int type, int phase, int xpos, int ypos, int xdelta, int ydelta)
@@ -891,7 +908,67 @@ int i, xdelta, ydelta;
    }
 }
 
-void disp_bkgnd(void)
+void testlines(void)
+{
+int i, j, k;
+int flg;
+
+   for (i = (FIELDHEIGHT+FIELDHIDHT - 1); i > 0; i--) {
+      flg = 0;
+
+      for (j = 0; j < FIELDWIDTH; j++) {
+         if (displn[i][j] == 0)
+            flg = 1;
+      }
+
+      if (flg != 1) {
+         for (k = i; k > 0; k--) {
+            for (j = 0; j < FIELDWIDTH; j++) {
+               displn[k][j] = displn[k-1][j];
+            }
+         }
+         deletelines++;
+	 i = i + 1;  // the last line will need to be rechecked
+      }
+   }
+   while (deletelines > 0) {
+      scoreval[4]++;
+      deletelines--;
+      for (i = 4; i >= 0; i--) {
+         if (scoreval[i] > '9') {
+            scoreval[i] = scoreval[i] - 10;
+            scoreval[i-1]++;
+         }
+      }
+   }
+}	
+
+void setsprvars(void)
+{
+int patterncode;
+int patternctrl;
+int blockptnctrl;
+
+
+   patterncode = SPRITE_PATTERN((piecetbl[(int)piecenum] + phasenum)->sprpattern_vram_addr);
+   patternctrl = (SPRITE_Y_HEIGHT_2 | SPRITE_X_WIDTH_2 | SPRITE_PRIO_SP | (piecenum+1) );
+
+   blockptnctrl = (SPRITE_Y_HEIGHT_2 | SPRITE_X_WIDTH_2 | SPRITE_PRIO_BG | 1 );  // palette doesn't actually matter
+
+   eris_sup_set(VDC0);
+
+// set up sprite 1 as the "invisible block":
+//
+   eris_sup_spr_set(1);
+   eris_sup_spr_create((pieceposx * 8) + FLD_SPRXORG, FLD_SPRYORG, SPRITE_PATTERN(SPR_P7PH0VRAM), blockptnctrl);
+   
+// set up sprite 2 as the "falling block":
+//
+   eris_sup_spr_set(2);
+   eris_sup_spr_create((pieceposx * 8) + FLD_SPRXORG, (pieceposy * 8) + FLD_SPRYORG, patterncode, patternctrl);
+}
+
+void dispbkgnd(void)
 {
 int x, y;
 
@@ -910,84 +987,6 @@ int x, y;
             eris_low_sup_vram_write(VDC0, bkchr1.ref);
          }
       }
-   }
-}
-
-void print_text(VDCNUM vdc, int x_pos, int y_pos, int palette, char *mesg, int maxlen)
-{
-int x;
-char letter;
-uint16_t fontref = 0;
-
-   eris_low_sup_set_vram_write(vdc, (y_pos*BGMAPWIDTH + x_pos));
-   for (x = 0; x < maxlen; x++)
-   {
-      letter = *(mesg + x);
-      if (letter == 0)
-         break;
-
-      fontref = ((((CG_FONTLOC) >> 4) + letter)  | (palette << 12));
-      eris_low_sup_vram_write(vdc, fontref);
-   }
-}
-
-void init_score(void)
-{
-   strcpy(scoreval, "00000");
-   scoreval[5] = 0x00;
-}
-
-void display_score(void)
-{
-int x;
-char letter;
-uint16_t fontref = 0;
-int palette = 0;
-
-   eris_low_sup_set_vram_write(VDC0, (SCOREPOSY*BGMAPWIDTH + SCOREPOSX));
-
-   for (x = 0; x < 7; x++)
-   {
-      letter = *(scoremsg + x);
-      if (letter == 0)
-         break;
-
-      fontref = ((((CG_FONTLOC) >> 4) + letter)  | (palette << 12));
-      eris_low_sup_vram_write(VDC0, fontref);
-   }
-
-   for (x = 0; x < 6; x++)
-   {
-      letter = *(scoreval + x);
-      if (letter == 0)
-         break;
-
-      fontref = ((((CG_FONTLOC) >> 4) + letter)  | (palette << 12));
-      eris_low_sup_vram_write(VDC0, fontref);
-   }
-}
-
-//uint32_t joy_trigger(uint32_t joyval)
-//{
-//static uint32_t last_val = 0;
-//uint32_t trigger;
-//
-//   trigger = (~last_val & joyval);
-//   last_val = joyval;
-//
-//   return(trigger);
-//}
-
-void wait_joypad_run(void)
-{
-   vsync(1);
-
-   while (1)
-   {
-      vsync(0);
-
-      if ((joytrg & JOY_RUN) == JOY_RUN)
-         break;
    }
 }
 
@@ -1049,28 +1048,73 @@ int addr;
    }
 }
 
-void pause(void)
+void display_score(void)
 {
+int x;
+char letter;
+uint16_t fontref = 0;
 int palette = 0;
 
-   disp_blank_playfield();
+   eris_low_sup_set_vram_write(VDC0, (SCOREPOSY*BGMAPWIDTH + SCOREPOSX));
 
-   print_text(VDC0, PAUSEMSGX, PAUSEMSGY, palette, pausemsg, 5);
+   for (x = 0; x < 7; x++)
+   {
+      letter = *(scoremsg + x);
+      if (letter == 0)
+         break;
 
-   wait_joypad_run();
+      fontref = ((((CG_FONTLOC) >> 4) + letter)  | (palette << 12));
+      eris_low_sup_vram_write(VDC0, fontref);
+   }
 
-   disp_playfield();
+   for (x = 0; x < 6; x++)
+   {
+      letter = *(scoreval + x);
+      if (letter == 0)
+         break;
+
+      fontref = ((((CG_FONTLOC) >> 4) + letter)  | (palette << 12));
+      eris_low_sup_vram_write(VDC0, fontref);
+   }
 }
 
-void gameover(void)
+void print_text(VDCNUM vdc, int x_pos, int y_pos, int palette, char *mesg, int maxlen)
 {
-int palette = 0;
+int x;
+char letter;
+uint16_t fontref = 0;
 
-   print_text(VDC0, GAMOVRMSGX, GAMOVRMSGY, palette, gameovermsg1, 4);
-   print_text(VDC0, GAMOVRMSGX, GAMOVRMSGY+1, palette, gameovermsg2, 4);
+   eris_low_sup_set_vram_write(vdc, (y_pos*BGMAPWIDTH + x_pos));
+   for (x = 0; x < maxlen; x++)
+   {
+      letter = *(mesg + x);
+      if (letter == 0)
+         break;
 
-   wait_joypad_run();
+      fontref = ((((CG_FONTLOC) >> 4) + letter)  | (palette << 12));
+      eris_low_sup_vram_write(vdc, fontref);
+   }
 }
+
+void init_score(void)
+{
+   strcpy(scoreval, "00000");
+   scoreval[5] = 0x00;
+}
+
+void wait_joypad_run(void)
+{
+   vsync(1);
+
+   while (1)
+   {
+      vsync(0);
+
+      if ((joytrg & JOY_RUN) == JOY_RUN)
+         break;
+   }
+}
+
 
 void init(void)
 {
@@ -1137,12 +1181,7 @@ int i, j;
    }
    eris_king_set_kram_write(0, 1);
 
-//   eris_low_sup_set_vram_write(0, 0);
-//   for(i = 0; i < 0x800; i++) {
-//      eris_low_sup_vram_write(0, 0x120); // 0x80 is space
-//   }
-
-
+   //
    // load font into video memory
    // font background/foreground should be subpalettes #0 and #3 respectively
    //
@@ -1237,22 +1276,5 @@ int i, j;
    eris_low_sup_setreg(VDC0, 5, 0xC8);  // Set Hu6270 BG to show, and VSYNC Interrupt
 
    eris_bkupmem_set_access(1,1);
-}
-
-
-// print with first 7up (HuC6270 #0)
-//
-void print_at(int x, int y, int pal, char* str)
-{
-int i;
-u16 a;
-
-   i = (y * 64) + x;
-
-   eris_low_sup_set_vram_write(VDC0, i);
-   for (i = 0; i < strlen8(str); i++) {
-      a = (pal * 0x1000) + str[i] + 0x100;
-      eris_low_sup_vram_write(VDC0, a);
-   }
 }
 
