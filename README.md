@@ -45,4 +45,8 @@ currently in a state where it could be compared against the original PC Engine c
 found at this (relatively) new repository:
 [https://github.com/pcfx-devel/PC-FX_Programming_Tools](https://github.com/pcfx-devel/PC-FX_Programming_Tools)
 
+## Screenshot
+
+![Blox](images/blox.png)
+
 
