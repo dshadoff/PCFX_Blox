@@ -1,14 +1,15 @@
 # PCFX_Blox
-Falling Blocks-type game rewritten in 'C' for PC-FX (based on PC Engine game written in Assembler in 1999)
+Falling Blocks-type game rewritten in 'C' for PC-FX (based on PC Engine game written in Assembler in 1999).
 
 ## Background
 
 This is a rewrite of the PCE_Blox game I wrote in assembler for the PC Engine back in 1998/1999, but this
-version is written in 'C' for the PC-FX.
+version is written in 'C' for the PC-FX.  The original proof-of-concept game can be found here:
+[https://github.com/dshadoff/PCE_Blox](https://github.com/dshadoff/PCE_Blox)
 
 Although I have had many thoughts over the years about how to implement this in alternative ways, I have
 tried to remain as faithful as possible to the original program's design, data layouts, variable names,
-etc.  and make this as straightforward of a port as possible, so that people can compare the two works.
+etc., and make this as straightforward of a port as possible, so that people can compare the two works.
 
 There are several reasons I undertook this rewrite:
 
@@ -34,10 +35,11 @@ sound generator, joypad, CDROM, ADPCM) is the initial focus of these tools.
 
 ## Current State
 
- 1) The Blox field of play is incomplete, though some aspects are approaching completion.  The code is
+ 1) Blox is working and complete, except that the piece selection is not yet random (pseudo-random number
+generator functions still need to be created, and made into part of the support libraries.  The code is
 somewhat messy, as I have been required to include additional #define statements and other facilities
-which should be part of the base liberis functions; this refactoring will take place once the game is
-in a fully-working state.
+which should be part of the base liberis functions; this refactoring will take place soon. The code is
+currently in a state where it could be compared against the original PC Engine code however.
 
  2) Several tools have been written to support the palette and graphic data conversions required. These can be
 found at this (relatively) new repository:
