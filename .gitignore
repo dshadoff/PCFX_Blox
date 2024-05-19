@@ -2,12 +2,9 @@
 *.bak
 *.orig
 *.swp
-*.cue
 *.gen_data
 *.lst
 *.map
 *.o
 *.source
 *.linked
-*.bin
-blox
