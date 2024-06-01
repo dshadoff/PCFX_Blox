@@ -1,5 +1,5 @@
 /*
- *   Hexview - Program for the PC-FX to view memory
+ *   Blox - A "falling blocks" type game for the PC-FX
  *
  *   Copyright (C) 2024 David Shadoff
  */
