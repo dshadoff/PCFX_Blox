@@ -4,6 +4,7 @@
  *   Copyright (C) 2024 David Shadoff
  */
 
+#include <stdlib.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <string.h>
@@ -570,12 +571,23 @@ __attribute__ ((noinline)) void joyread(void)
 ///////////////////////////////// Interrupt handler
 __attribute__ ((interrupt_handler)) void my_vblank_irq (void)
 {
+   static int random_initialized = 0;
    uint16_t vdc_status = *MEM_6270A_SR;
 
-   if (vdc_status & HUC6270_STAT_VD ) {
+   if (vdc_status & HUC6270_STAT_VD )
+   {
       sda_frame_count++;
+
+      // the first time this vsync handler is run, seed it
+      if (random_initialized == 0)
+      {
+         srand(563);             // just a random seed (default value)
+         random_initialized = 1;
+      }
+      rand();   // every VSYNC, consume a random value to further randomize
+
+      joyread();
    }
-   joyread();
 }
 
 void vsync(int numframes)
@@ -634,7 +646,10 @@ int main(int argc, char *argv[])
 {
    init();
 
-//TODO:  Initialize random number generator
+//  You could re-seed the random number generator with something else
+//  here, if you really wanted, but the vsync handler contains a default value
+//
+//   srand(563);
 
 
    while (1)     // This is a loop for games (each iteration is a game)
@@ -661,10 +676,12 @@ int main(int argc, char *argv[])
       display_score();
       disp_playfield();
 
-//TODO:  Get a random piece number
-      piecenum  = 0;
+      // initialize with an illegal piecenum, so that randomizer
+      // doesn't exclude any particular piece as the first piece
+      // since we have a rule to avoid consecutive pieces of the same type.
+      piecenum  = 7;
 
-      setpiece();
+      nxtpiece();
 
       // set countdown interval - number of frames until piece moves downward
       //
@@ -673,8 +690,6 @@ int main(int argc, char *argv[])
       while (1)     // This is a loop for vsyncs within a game
       {
          deletelines = 0;
-
-//TODO:  More randomization
 
          sensejoy();      // figure out joypad auto-repeat
          joypadmv();      // move
@@ -849,11 +864,15 @@ int rotatey;
 
 void nxtpiece(void)
 {
-// actually, this should get a random number from 0 to 6
-   piecenum++;
+// This should get a random number from 0 to 6
+// Also, repeated pieces are not allowed
+//
+  int lastpiecenum = piecenum;
 
-   if (piecenum > 6)
-      piecenum = 0;
+   do {
+      piecenum = (rand() & 7);
+   } while ((piecenum > 6) || (piecenum == lastpiecenum));
+
    setpiece();
 }
 
